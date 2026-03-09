@@ -9,7 +9,7 @@ Ad_int = [Ad        Bd           ;
           H*C*Ts    zeros(nr,nu)];
 Bd_int = [Bd; zeros(nr,nu)];
 
-Qx = blkdiag(2e-2,2e-2,10,10); Qr = eye(nr);
+Qx = eye(4); Qr = eye(nr);
 R = eye(nu);
 
 Q = blkdiag(Qx,Qr);
@@ -23,6 +23,23 @@ phi_r = inv( z*eye(nx) - ( Ad - Bd*K ) );
 Hcl = C*phi_r*Bd;
 Hof = K*phi*Bd;
 
+ss_cl = ss((Ad - Bd*K), Bd, C, [],Ts);
+
+set(0,'defaultTextInterpreter','latex')
+figure(1)
+p_opt = pzoptions;
+p_opt.Grid = 'on';
+p_opt.XLabel.FontSize = 14;
+p_opt.YLabel.FontSize = 14;
+p_opt.FreqUnits = 'Hz';
+p_opt.Title.String = '';
+pzmap(ss_cl,p_opt,'r*');
+hScatter = findobj(gcf,"Type","scatter");
+hScatter(1).LineWidth = 1; hScatter(2).LineWidth = 1;
+hAxes = findobj(gcf,"Type","axes");
+hAxes.FontSize = 12;
+
+%%
 fmin_vec = 100; fmax_vec = 20e3; fvec = logspace(log10(fmin_vec), log10(fmax_vec), 500);
 sigma_max = zeros(1,length(fvec));
 sigma_min = zeros(1,length(fvec));

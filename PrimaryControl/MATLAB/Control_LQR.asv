@@ -9,12 +9,12 @@ Ad_int = [Ad        Bd           ;
           H*C*Ts    zeros(nr,nu)];
 Bd_int = [Bd; zeros(nr,nu)];
 
-Qx = 10*eye(nx); Qr = eye(nr);
+Qx = eye(4); Qr = eye(nr);
 R = eye(nu);
 
 Q = blkdiag(Qx,Qr);
-[K,~,~] = lqr(Ad,Bd,Qx,R);
-[K_int,~,~] = lqr(Ad_int,Bd_int,Q,R);
+[K,~,~] = dlqr(Ad,Bd,Qx,R);
+[K_int,~,~] = dlqr(Ad_int,Bd_int,Q,R);
 
 syms z
 
@@ -23,26 +23,37 @@ phi_r = inv( z*eye(nx) - ( Ad - Bd*K ) );
 Hcl = C*phi_r*Bd;
 Hof = K*phi*Bd;
 
-fmin_vec = 100; fmax_vec = 20e3; fvec = logspace(fmin_vec, fmax_vec, 500);
-mag = zeros(nx,nu,length(fvec));
+ss_cl = ss((Ad - Bd*K), Bd, C, [],Ts);
+figure(1)
+p_opt = pzoptions;
+p_opt.Grid = 'on';
+p_opt.XLabel.String = 'Real A'
+p_opt.FreqUnits = 'Hz';
+pzmap(ss_cl);
 
-for k = 1:length(w)
-    zi = exp(1j*fvec(k)*Ts);
+%%
+fmin_vec = 100; fmax_vec = 20e3; fvec = logspace(log10(fmin_vec), log10(fmax_vec), 500);
+sigma_max = zeros(1,length(fvec));
+sigma_min = zeros(1,length(fvec));
+
+for k = 1:length(fvec)
+    zi = exp(1j*2*pi*fvec(k)*Ts);
     Hi = double(subs(Hof, z, zi));
-    for i = 1:nu
-        for j = 1:nu
-            mag(i,j,k) = abs(Hi(i,j));
-        end
-    end
+    s = svd(Hi);
+    sigma_max(k) = max(s);
+    sigma_min(k) = min(s);
 end
 
 set(0,'defaultTextInterpreter','latex')
 fres = 1/(2*pi*sqrt(Lf*Cf));
 figure(1);
-semilogx(fvec,20*log10(squeeze(mag(1,1,:))),'LineWidth',2); 
+semilogx(fvec,20*log10(sigma_max),'LineWidth',2); 
 hold on;
-semilogx(fvec,20*log10(squeeze(mag(1,2,:))),'LineWidth',2); 
+semilogx(fvec,20*log10(sigma_min),'LineWidth',2); 
 xline(fres,'LineWidth',2,'LineStyle','--')
+xline(fsw,'LineWidth',2,'LineStyle',':')
 set(gca,'FontSize',14)
 hold off; grid on; xlabel('Frequency [Hz]'); ylabel('Gain [dB]')
-legend('$\sigma(\mathbf{K}_c\mathbf{\Phi}\mathbf{B}_d)_i$','$\sigma(\mathbf{K}_c\mathbf{\Phi}\mathbf{B}_d)_v$','FontSize',14)
+legend('$\bar{\sigma}(\mathbf{K}_c\mathbf{\Phi}\mathbf{B}_d)$', ...
+       '$\underline{\sigma}(\mathbf{K}_c\mathbf{\Phi}\mathbf{B}_d)$', ...
+       'FontSize',14)
